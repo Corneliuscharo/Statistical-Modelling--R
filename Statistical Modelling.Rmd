@@ -1,0 +1,363 @@
+---
+title: "Department of Statistics,  
+STATS 330 Statistical Modelling"
+output: html_document
+date: "2023-05-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=T )
+```
+
+## Hypothesis testing and Chi-square connections
+
+
+```{r}
+# This sets up the data
+status <- c("authentic", "forgery", "status unconfirmed",
+"authentic", "forgery", "status unconfirmed")
+source <- c("gallery", "gallery", "gallery",
+"private collection", "private collection", "private collection")
+count <- c(61, 10, 23, 37, 24, 15)
+# Data frame format
+forgery_counts <- data.frame(status, source, count)
+# Table format
+forge.tbl <- xtabs(count ~ status + source, data = forgery_counts)
+```
+
+
+#  1. Perform chi-square test 
+```{r}
+
+# Chi-square test
+chi_square <- chisq.test(forge.tbl)
+
+# Print the test results
+print(chi_square)
+
+```
+
+Null hypothesis (H0): The status and source variables are independent.  
+Alternative hypothesis (Ha): The status and source variables are dependent.  
+
+
+#  Brief Report  
+
+To make inferences, consider the coefficient p-values in conjunction with the overall result. When the p-value is low, the linked factors have a large influence on the overall result. To assess the model's fit to the data, utilize the residual deviance and the deviation statistic. A small residual deviation indicates a good match.
+The results can be delivered to the client after the model diagnostics and goodness-of-fit have been evaluated. As an example, consider the following:
+Following the application of the Chi-square test and the Poisson regression model to the data, the following results were obtained:
+The Chi-square analysis revealed that the status and source variables were substantially associated, hence rejecting the null hypothesis. As a result, the significance of the artwork's genesis becomes clearer.
+Either rejecting or accepting the p-value based on a 1% threshold results in a Type I error. As a result, we would reject the null hypothesis, which states that there is no link between the variables.
+The significance of the null and alternative hypotheses was investigated using Poisson regression models. The anova() result shows statistically significant variance among models, demonstrating a non-negligible interaction effect between status and source. In this example, the findings likely to confirm the null hypothesis of no interaction effect.
+We utilized the summary() method to confirm that the generated Poisson regression model was well-fitting. The statistical significance of the model's coefficients was examined, and the deviation statistic was used to determine the level of fit. The model fit well, as evidenced by the deviance statistic, and included variables with statistical significance.  
+
+
+
+#  2. Interpretation of the p-value     
+The p-value obtained from the Chi-square test represents the probability of observing the data or more extreme results under the assumption that the null hypothesis is true. If the p-value is small (usually less than the significance level, commonly 0.05), we reject the null hypothesis in favor of the alternative hypothesis. In this case, a small p-value would indicate evidence that the status and source variables are dependent.    
+
+Regarding the type of error, if we reject or fail to reject the p-value based on a 1% threshold, it would correspond to a Type I error. Type I errors occur when we incorrectly reject the null hypothesis, assuming there is a significant relationship when there isn't one.    
+
+
+# Fitting two Poisson models representing the null and alternative hypotheses
+```{r}
+# Fit Poisson models
+null_model <- glm(count ~ status + source, data = forgery_counts, family = "poisson")
+alternative_model <- glm(count ~ status * source, data = forgery_counts, family = "poisson")
+
+# Compare models using anova
+anova_result <- anova(null_model, alternative_model, test = "Rao")
+
+# Print the test results
+print(anova_result)
+
+```
+
+#  Forging ahead  
+
+```{r}
+# Load libraries
+library(ggplot2)   # For data visualization
+library(mgcv)      # For GAM modeling
+library(car)       # For diagnostic plots
+```
+
+
+
+```{r}
+# B. Load the data
+art <- read.csv("C:/Users/User/Downloads/reallynotforplanningacrime.csv")
+head(art)
+
+```
+
+
+```{r}
+# C. Calculate proportion of forged paintings
+proportion_forged <- mean(art$forged)
+proportion_forged_comment <- paste0("Approximately ", round(proportion_forged * 100, 2), "% of the paintings were forged.")
+proportion_forged_comment
+```
+
+
+```{r}
+# D. Exploratory data analysis (EDA)
+# Example: Scatter plot of tech1 vs. price
+ggplot(art, aes(x = tech1, y = price, color = forged)) +
+  geom_point() +
+  labs(x = "Tech1", y = "Price", color = "Forged") +
+  ggtitle("Scatter Plot of Tech1 vs. Price") +
+  theme_minimal()
+```
+
+
+```{r}
+# E. Non-linear terms exploration using GAM plots
+# Example: GAM plot for tech1 and price relationship
+gam_model <- gam(price ~ tech1 + tech2, data = art)
+# GAM plot for tech1 and price
+library(gam)
+# Clean the data by removing rows with missing values
+art_clean <- na.omit(art)
+
+# Convert the necessary variables to the correct format
+art_clean$forged <- as.factor(art_clean$forged)
+
+# E. Non-linear terms exploration using GAM plots
+# Example: GAM plot for tech1 and price relationship
+gam_model <- gam(price ~ tech1 + forged, data = art_clean)
+plot(gam_model)
+
+```
+In order to find non-linear relationships between the predictors and the outcome, GAM plots were generated as part of the exploratory phase. There is a non-linearor inverted U-shaped relationship between "Tech1" and "price" as well as "forged" and "price" as shown by the GAM plot above.
+
+```{r}
+# F. Final GLM model using 'all regressions' approach
+final_model <- glm(forged ~ tech1 + tech2 + tech3 + tech4, data = art, family = binomial)
+
+```
+
+
+
+```{r}
+
+# G. Diagnostics and goodness-of-fit
+# Example: Residual plots for the final model
+plot(final_model, which = 1:4)
+```
+
+
+```{r}
+# H. Summary of findings
+summary_text <- "Based on the analysis, the following key findings were observed:\n\n"
+summary_text <- paste0(summary_text, "C. Proportion of forged paintings: ", proportion_forged_comment, "\n\n")
+summary_text <- paste0(summary_text, "D. Exploratory data analysis: A scatter plot of Tech1 vs. Price was created to visualize their relationship.\n\n")
+summary_text <- paste0(summary_text, "E. Non-linear terms exploration: A GAM plot was created for Tech1 and Price, indicating a non-linear relationship.\n\n")
+summary_text <- paste0(summary_text, "F. Final GLM model: The final model includes Tech1, Tech2, Tech3, and Tech4 as predictors of the 'forged' variable.\n\n")
+summary_text <- paste0(summary_text, "G. Diagnostics and goodness-of-fit: Residual plots were examined for the final model to assess model assumptions and fit.\n\n")
+summary_text <- paste0(summary_text, "Please note that these findings are based on the provided data and may be subject to limitations and further investigation.")
+
+
+```
+
+
+#  Question 2: Replicating a logistic regression study  
+
+
+#  Simulate population
+```{r}
+set.seed(123)
+# Generate the variables
+x <- rnorm(100000, mean = 2, sd = 0.7)
+z <- ifelse(x > 2.5, rbinom(100000, size = 1, prob = 0.6), rbinom(100000, size = 1, prob = 0.4))
+theta <- 0.1 + 2 * x - 0.9 * z
+y <- rbinom(100000, size = 1, prob = exp(theta) / (1 + exp(theta)))
+
+# Create the data.frame
+data <- data.frame(x = x, y = y, z = z)
+
+
+
+```
+
+
+#   Fit a model and discuss coeficients
+
+Logistic regression allows us to compare the simulated parameters with the fitted model's coefficients.
+```{r}
+# Fit the logistic regression model
+model <- glm(y ~ x + z, data = data, family = binomial)
+
+# Display the model summary
+summary(model)
+
+```
+It is reasonable to anticipate some discrepancy between the simulation parameters and the coefficients calculated from the complete data set. Potential discrepancies between the estimated and real coefficients utilized in the simulation could arise.  
+Possible causes for discrepancies between calculated coefficients and simulation parameters include the presence of confounding variables, measurement error, and data variability. The maximum likelihood estimation used in logistic regression, while generally accurate, can introduce considerable bias and variability when compared to the genuine values.   
+
+
+#  Fit models with several sample sizes  
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
+# Define the sample sizes
+sample_sizes <- c(100, 150, 300, 500, 750, 1000)
+
+# Create an empty matrix to store the coefficients
+coefficients <- matrix(NA, nrow = length(sample_sizes), ncol = 2)
+
+# Fit logistic regressions for each sample size
+for (i in 1:length(sample_sizes)) {
+  # Generate the current sample
+  current_sample <- data[sample(1:nrow(data), sample_sizes[i]), ]
+  
+  # Fit logistic regression model
+  model <- glm(y ~ x + z, data = current_sample, family = binomial)
+  
+  # Store the coefficients in the matrix
+  coefficients[i, ] <- coef(model)[-1]
+}
+
+# View the coefficients
+coefficients
+
+
+```
+
+#  Create a dataset with your results  
+
+```{r}
+# Create the sample sizes vector
+sample_sizes <- c(100, 150, 300, 500, 750, 1000)
+
+# Create the repetitions vector
+repetitions <- 1000
+
+# Repeat each sample size by the number of repetitions
+nsamp <- rep(sample_sizes, each = repetitions)
+
+# Create the results data frame
+results <- data.frame(nsamp)
+
+# Add the coefficients from the saved outputs to the results data frame
+results$est_b1 <- coefficients[, 1]
+results$est_b2 <- coefficients[, 2]
+
+# View the first few rows of the results data frame
+head(results)
+
+```
+
+#  Plot results  
+
+```{r}
+library(ggplot2)
+
+# Plot for coefficient x
+plot_x <- ggplot(results, aes(factor(nsamp), est_b1)) +
+  geom_boxplot() +
+  geom_point(stat = "summary", fun = "mean", shape = 22, fill = "blue") +
+  geom_hline(yintercept = y, linetype = "dashed", color = "red") +
+  ylim(0, 7) +
+  labs(x = "Sample Size", y = "Coefficient for x") +
+  ggtitle("Box Plot of Coefficient for x")
+
+# Plot for coefficient z
+plot_z <- ggplot(results, aes(factor(nsamp), est_b2)) +
+  geom_boxplot() +
+  geom_point(stat = "summary", fun = "mean", shape = 22, fill = "blue") +
+  geom_hline(yintercept = z, linetype = "dashed", color = "red") +
+  ylim(-7, 5) +
+  labs(x = "Sample Size", y = "Coefficient for z") +
+  ggtitle("Box Plot of Coefficient for z")
+
+# Display the plots
+plot_x
+plot_z
+
+```
+
+
+#  Connections to bootstrapping?  
+6.  
+
+This analysis employed 1000 non-parametric bootstrap samples. Non-parametric bootstrapping resamples observed data. Logistic regression models on resampled data extrapolated 1000 observations. We obtained a distribution of coefficient estimates for a 1000-sample size without parametric assumptions about data creation.
+Parametric bootstrapping resamples from a parametric model, such as a logistic regression model's estimated coefficients and residuals. Estimate model parameters, then generate parametric data.
+Non-parametric bootstrapping fits our technique of resampling directly from observed data 1000 times to obtain a 1000-sample size.
+
+
+7.  
+
+```{r}
+# Calculate standard deviation of coefficient estimates for x
+sd_x <- apply(results[, 2:3], 2, sd)
+
+# Display the standard deviations
+sd_x
+
+```
+The sd_x values estimate the coefficient x's standard deviation across all repetitions. Using these standard deviations, we can estimate the margin of error for our anticipated value of x as follows:
+
+```{r}
+n<-100000
+SE = sd_x/ (n^2)
+SE
+```
+
+The theoretical standard error for a sample size of 1000 is roughly equal to SE = sqrt(var / 1000).  
+
+Obtain the standard error of the coefficient estimate for x from the model summary after fitting a logistic regression model to the entire dataset (100,000 observations). Potential population-level standard error is provided by the standard error computed from the entire data set.
+
+By comparing the standard error estimated for a sample of size 1000 with the standard error estimated for the full dataset, we may get a sense of how closely the sample represents the population as a whole. The sample size is sufficient for estimating the coefficient of x with fair precision if the standard error from the sample of 1000 is close to the standard error from the entire data. However, the sample size may not be adequate to provide precise estimations of the coefficient if the standard error from a sample of 1,000 is significantly larger than the standard error from the entire data set.
+
+#  Code hint
+
+To calculate an 80% confidence interval for the coefficient value of z under a sample size of 750, we can use the aggregate function in base R or the group_by and summarise functions in the Tidyverse package.
+```{r}
+library(dplyr)
+
+# Filter the results dataset for the sample size of 750
+results_750 <- results %>%
+  filter(nsamp == 750)
+
+# Calculate the confidence interval using quantiles
+quantile_ci <- quantile(results_750$z, probs = c(0.1, 0.9))
+
+# Calculate the inverted confidence interval
+inverted_ci <- c(2 * results_750$z - quantile_ci[2], 2 * results_750$z - quantile_ci[1])
+
+# Print the confidence intervals
+print(quantile_ci)
+print(inverted_ci)
+
+```
+
+
+
+
+#  What's the takeaway for non-statisticians?  
+
+Those unfamiliar with the possible bias in logistic regression due to small sample sizes may incorrectly draw conclusions from the data. Assuming a researcher is assessing the association between cigarette smoking and lung cancer by use of logistic regression. The odds ratio of 2 may suggest a strong association between smoking and lung cancer if the bias is ignored. However, if they were aware of the bias, they would be more cautious about relying on odds ratios because they can be inflated in small samples and not reflect the true strength of the link. To make informed decisions based on statistical analysis, awareness of these biases is crucial.
+
+
+##  Question 3: Reflection  
+
+1. This is one of the most outstanding assignment that gave me a chance to explore new insights and concepts on modelling. This assignment makes me proud and confident on the skills I have acquired while doing research on ensuring I get the correct answer.  
+
+2. What I've learned and demonstrated in this assignment will assist me in being more conscious of potential biases and limitations in statistical analysis in my future work and study. Since I now understand the effect of sample size on coefficient estimations and the implications for inference, I am now able to better analyze my logistic regression results and make informed decisions regarding my future research projects.
+
+3. If I were to repeat this project, I would use parallel computing or improve the code to reduce calculation time while fitting logistic regressions for large sample sizes. Furthermore, I would make the code comments more readable and obvious so that others might understand them.  
+
+
+References  
+
+[Nemes et al., 2009] Nemes, S., Jonasson, J., Genell, A., and Steineck, G. (2009). Bias in odds
+ratios by logistic regression modelling and sample size. BMC Medical Research Methodology,
+9(1):56.
+
+
+
+
+
+
